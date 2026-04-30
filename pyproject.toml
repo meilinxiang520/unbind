@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unbind"
+dynamic = ["version"]
+description = "Universal document unbinder — any format → Markdown (for AI) or EPUB (for humans)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Zhou Xia" }]
+dependencies = [
+    "markitdown",
+    "Pillow",
+    "markdown",
+    "latex2mathml",
+    "regex",
+    "requests",
+]
+
+[project.optional-dependencies]
+pdf = ["marker-pdf"]
+dev = ["pytest"]
+
+[project.urls]
+Source = "https://github.com/zhouxia/unbind"
+
+[tool.hatch.version]
+path = "unbind/__about__.py"
+
+[project.scripts]
+unbind = "unbind.__main__:main"
