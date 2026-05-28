@@ -208,6 +208,7 @@ class Unbind:
 
                 if not ok:
                     continue
+                res = None
                 try:
                     res = reg.converter.convert(file_stream, info, **kwargs)
                 except Exception:
