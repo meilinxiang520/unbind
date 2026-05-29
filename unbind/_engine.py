@@ -29,6 +29,66 @@ class _Registration:
     priority: float
 
 
+_SENTENCE_END = re.compile(r"[。！？.!?;；>\"')”’]$")
+_SPECIAL_START = re.compile(r"^(#|!|\[|`|\||>|- |\* |\d+\. |\d+\) )")
+
+
+def _reflow_paragraphs(markdown: str) -> str:
+    """Merge mid-sentence line breaks introduced by PDF extraction.
+
+    A line break is treated as a hard break (paragraph) ONLY when the
+    previous line ends with sentence-ending punctuation.  A single blank
+    line between two text lines is treated as a PDF layout artifact and
+    merged across — unless the preceding line ends a sentence.
+    """
+    lines = markdown.split("\n")
+    result: List[str] = []
+    buf: List[str] = []
+
+    def _flush():
+        if buf:
+            result.append("".join(buf))
+            buf.clear()
+
+    for i, line in enumerate(lines):
+        stripped = line.rstrip()
+
+        if not stripped:
+            # Single blank line: merge across if previous line does NOT
+            # end with sentence-ending punctuation and next line looks
+            # like a text continuation (not a heading, image, list, etc.)
+            if buf and not _SENTENCE_END.search(buf[-1]):
+                next_line = ""
+                for j in range(i + 1, len(lines)):
+                    nl = lines[j].rstrip()
+                    if nl and not _SPECIAL_START.match(nl):
+                        next_line = nl
+                        break
+                    if nl:
+                        break
+                if next_line:
+                    continue  # swallow blank — PDF layout noise
+            _flush()
+            result.append("")
+            continue
+
+        if _SPECIAL_START.match(stripped):
+            _flush()
+            result.append(line)
+            continue
+
+        if buf and _SENTENCE_END.search(buf[-1]):
+            _flush()
+
+        buf.append(line)
+
+    _flush()
+
+    text = "\n".join(result)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
+
+
 class Unbind:
     """Universal document unbinder.
 
@@ -224,6 +284,7 @@ class Unbind:
                         line.rstrip() for line in re.split(r"\r?\n", res.markdown)
                     )
                     res.markdown = re.sub(r"\n{3,}", "\n\n", res.markdown)
+                    res.markdown = _reflow_paragraphs(res.markdown)
                     return res
 
         if failed:
